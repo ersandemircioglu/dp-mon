@@ -1,0 +1,96 @@
+{
+    "satellites": [
+        {
+            "name": "SAT01",
+            "initial_orbit": 1234,
+            "orbit_duration": 90 
+        },
+        {
+            "name": "SAT02",
+            "initial_orbit": 34567,
+            "orbit_duration": 90 
+        }
+    ],
+    "sat_data_templates": [
+        {
+            "name": "SAT01_INST01_RAW",
+            "filename_template": "INST01_SAT01_GS01_{sensing_start:%Y%m%d%H%M%S}_{sensing_stop:%Y%m%d%H%M%S}_{orbit:05d}.raw",
+            "variables": {
+                "sensing_start": "simulation_time() - datetime.timedelta(minutes=3)",
+                "sensing_stop": "simulation_time()",
+                "orbit": "orbit(\"SAT01\")"
+            },
+            "frequency": 120,
+            "first_pass": 3,
+            "pass_duration": 15,
+            "segment_duration": 15,
+            "generate_end_file": false,
+			"error_rate": 5  
+        }, 
+        {
+            "name": "SAT02_INST01_RAW",
+            "filename_template": "INST01_SAT02_GS02_{sensing_start:%Y%m%d%H%M%S}_{sensing_stop:%Y%m%d%H%M%S}_{orbit:05d}.raw",
+            "variables": {
+                "sensing_start": "simulation_time() - datetime.timedelta(minutes=1)",
+                "sensing_stop": "simulation_time()",
+                "orbit": "orbit(\"SAT02\")"
+            },
+            "frequency": 180,
+            "first_pass": 5,
+            "pass_duration": 10,
+            "segment_duration": 10,
+            "generate_end_file": false,
+			"error_rate": 5
+        }
+    ], 
+    "aux_data_templates": [
+        {
+            "name": "TLE",
+            "filename_template": "tle_{production_time:%Y%m%d%H%M%S}.txt",
+            "variables": {
+                "production_time": "simulation_time()"
+            },
+            "frequency": 60,
+            "first_generation": 0,
+			"error_rate": 25
+        }, 
+        {
+            "name": "forecast",
+            "filename_template": "forecast_{validity_start:%Y%m%d%H%M%S}_{validity_stop:%Y%m%d%H%M%S}_{production_time:%Y%m%d%H%M%S}.bin",
+            "variables": {
+                "validity_start": "simulation_time()",
+                "validity_stop": "simulation_time() + datetime.timedelta(minutes=60)",
+                "production_time": "simulation_time()"
+            },
+            "frequency": 15,
+            "first_generation": 0,
+			"error_rate": 25
+        }
+    ], 
+	"prod_templates":[
+		{
+			"name": "SAT01_INST01_L0",
+		    "filename_template": "INST01_SAT01_GS01_{sensing_start:%Y%m%d%H%M%S}_{sensing_stop:%Y%m%d%H%M%S}_{orbit:05d}_{production_time:%Y%m%d%H%M%S}.L0",
+            "variables": {
+                "sensing_start": "inputs[\"SAT01_INST01_RAW\"][\"sensing_start\"]",
+                "sensing_stop": "inputs[\"SAT01_INST01_RAW\"][\"sensing_stop\"]",
+                "orbit": "inputs[\"SAT01_INST01_RAW\"][\"orbit\"]",
+				"production_time": "simulation_time()"
+            },
+			"trigger_file": "SAT01_INST01_RAW",
+			"input_files": [
+				"TLE",
+				"forecast"
+			],
+			"quality_estimation": [
+				"1 if inputs[\"forecast\"][\"validity_stop\"] >= simulation_time() else to_minutes(simulation_time() - inputs[\"forecast\"][\"validity_stop\"])",
+				"1 if to_minutes(simulation_time() - inputs[\"TLE\"][\"production_time\"]) < 60 else to_minutes(simulation_time() - inputs[\"TLE\"][\"production_time\"]) - 60",
+				"1 if to_minutes(metadata[\"production_time\"] - metadata[\"sensing_stop\"]) < self.timeliness else to_minutes(metadata[\"production_time\"] - metadata[\"sensing_stop\"]) - self.timeliness"
+								
+			],
+            "processing_duration": 3,
+            "timeliness": 5,
+            "error_rate": 25
+		}
+	]
+}
