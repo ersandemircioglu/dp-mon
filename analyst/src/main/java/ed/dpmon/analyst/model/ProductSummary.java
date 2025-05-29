@@ -1,14 +1,17 @@
 package ed.dpmon.analyst.model;
 
-import java.util.List;
-
 import lombok.Data;
 
 @Data
 public class ProductSummary {
-    String processing_time;
-    String name;
-    String filename;
-    Float quality;
-    List<ProductSummary> inputs;
+    private String processing_time;
+    private String name;
+    private String filename;
+    private Boolean isProduct;
+    private float quality;
+    // private List<ProductSummary> inputs;
+
+    public boolean isProduct() {
+        return this.isProduct.booleanValue();
+    }
 }

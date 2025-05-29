@@ -5,13 +5,18 @@ import lombok.Data;
 @Data
 public class AnalysisResult {
 
-    String processing_time;
-    String name;
-    String filename;
-    Float quality;
+    private final ProductSummary productSummary;
 
-    Long relativeTime;
+    /**
+     * Quality class between 0 (low or N/A) - AnalystService.NUM_OF_QUALITY_CLASS
+     * (high)
+     */
+    private int qualityClass;
 
-    Long timeliness;
-    boolean isActual;
+    /**
+     * Processing time relative to T0 in minutes
+     */
+    private Long relativeTime;
+
+    private boolean isActual;
 }

@@ -33,13 +33,11 @@ public class AnalystController {
 
     @PostMapping("/inject")
     public int inject(@RequestBody List<ProductSummary> productSummaries) {
-        System.out.println("AnalystController.inject()");
         return analystService.inject(productSummaries);
     }
 
     @PatchMapping("/append")
     public int append(@RequestBody ProductSummary productSummary) {
-        System.out.println("AnalystController.append()");
         return analystService.append(productSummary);
     }
 

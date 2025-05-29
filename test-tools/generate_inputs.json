@@ -91,6 +91,30 @@
             "processing_duration": 3,
             "timeliness": 5,
             "error_rate": 25
-		}
+		}, 
+		{
+            "name": "SAT02_INST01_L0",
+            "filename_template": "INST01_SAT02_GS02_{sensing_start:%Y%m%d%H%M%S}_{sensing_stop:%Y%m%d%H%M%S}_{orbit:05d}_{production_time:%Y%m%d%H%M%S}.L0",
+            "variables": {
+                "sensing_start": "inputs[\"SAT02_INST01_RAW\"][\"sensing_start\"]",
+                "sensing_stop": "inputs[\"SAT02_INST01_RAW\"][\"sensing_stop\"]",
+                "orbit": "inputs[\"SAT02_INST01_RAW\"][\"orbit\"]",
+                "production_time": "simulation_time()"
+            },
+            "trigger_file": "SAT02_INST01_RAW",
+            "input_files": [
+                "TLE",
+                "forecast"
+            ],
+            "quality_estimation": [
+                "1 if inputs[\"forecast\"][\"validity_stop\"] >= simulation_time() else to_minutes(simulation_time() - inputs[\"forecast\"][\"validity_stop\"])",
+                "1 if to_minutes(simulation_time() - inputs[\"TLE\"][\"production_time\"]) < 60 else to_minutes(simulation_time() - inputs[\"TLE\"][\"production_time\"]) - 60",
+                "1 if to_minutes(metadata[\"production_time\"] - metadata[\"sensing_stop\"]) < self.timeliness else to_minutes(metadata[\"production_time\"] - metadata[\"sensing_stop\"]) - self.timeliness"
+                                
+            ],
+            "processing_duration": 8,
+            "timeliness": 10,
+            "error_rate": 25
+        }
 	]
 }

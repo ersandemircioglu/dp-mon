@@ -46,8 +46,9 @@ class ProductSummary:
     processing_time: str
     name: str
     filename: str
-    quality: float = None
-    inputs: list = None 
+    isProduct: bool = False
+    quality: float = 0
+    # inputs: list = None 
 
 
 class CLIError(Exception):
@@ -108,16 +109,16 @@ class SatDataTemplate:
         metadata = {}
         for key, value in self.variables.items():
             metadata[key] = eval(value)
-        s = self.filename_template.format(**metadata)
+        filename = self.filename_template.format(**metadata)
         self.last_generation_time = current_simulation_time
         if is_end_file:
-            s = s + "_END"
-        log("RawDataHandler", "INFO", f"{s} has been downloaded")
-        metadata["filename"] = s
-        metadata["summary"] = ProductSummary(current_simulation_time.isoformat(), self.name, s)
+            filename = filename + "_END"
+        log("RawDataHandler", "INFO", f"{filename} has been downloaded")
+        metadata["filename"] = filename
+        metadata["summary"] = ProductSummary(current_simulation_time.isoformat(), self.name, filename)
         archive[self.name] = metadata
         return dataclasses.asdict(metadata["summary"])
-        # log("RawDataHandler", "INFO", f"{s} has been archived")
+        # log("RawDataHandler", "INFO", f"{filename} has been archived")
             
     def __is_in_pass(self, current_simulation_time):
         if self.pass_start <= current_simulation_time and current_simulation_time <= self.pass_end:
@@ -149,18 +150,18 @@ class AuxDataTemplate:
             metadata = {}
             for key, value in self.variables.items():
                 metadata[key] = eval(value)
-            s = self.filename_template.format(**metadata)
+            filename = self.filename_template.format(**metadata)
             self.next_generation_time = current_simulation_time + datetime.timedelta(minutes=self.frequency)
-            log("AuxDataHandler", "INFO", f"{s} has been received")
+            log("AuxDataHandler", "INFO", f"{filename} has been received")
             
-            metadata["filename"] = s
-            metadata["summary"] = ProductSummary(current_simulation_time.isoformat(), self.name, s)
+            metadata["filename"] = filename
+            metadata["summary"] = ProductSummary(current_simulation_time.isoformat(), self.name, filename)
             if not check_error(self.error_rate):
                 archive[self.name] = metadata
                 return dataclasses.asdict(metadata["summary"])
             else:
                 return None
-            # log("AuxDataHandler", "INFO", f"{s} has been archived")
+            # log("AuxDataHandler", "INFO", f"{filename} has been archived")
 
 
 class ProdTemplate:
@@ -192,15 +193,15 @@ class ProdTemplate:
                 metadata = {}
                 for key, value in self.variables.items():
                     metadata[key] = eval(value)
-                s = self.filename_template.format(**metadata)
-                log(f"Processor.{self.name}", "INFO", f"{s} has been generated")
+                filename = self.filename_template.format(**metadata)
+                log(f"Processor.{self.name}", "INFO", f"{filename} has been generated")
                 
-                metadata["filename"] = s
+                metadata["filename"] = filename
                 
-                qual = self.__calculate_quality(inputs, metadata)
-                log(f"Processor.{self.name}", "INFO", f"{s} quality is {qual}")
+                quality = self.__calculate_quality(inputs, metadata)
+                log(f"Processor.{self.name}", "INFO", f"{filename} quality is {quality}")
                 
-                metadata["summary"] = ProductSummary(current_simulation_time.isoformat(), self.name, s, qual)
+                metadata["summary"] = ProductSummary(current_simulation_time.isoformat(), self.name, filename, True, quality)
                 
                 archive[self.name] = metadata
                 archive.pop(self.trigger_file, None)
@@ -208,8 +209,9 @@ class ProdTemplate:
                     self.next_processing_duration = int(random.random() * self.timeliness)
                 else:
                     self.next_processing_duration = int(random.random() * self.timeliness * 10)
-                # log(f"Processor.{self.name}", "INFO", f"{s} has been archived")
-                return dataclasses.asdict(ProductSummary(current_simulation_time.isoformat(), self.name, s, qual, inputs_summary))
+                # log(f"Processor.{self.name}", "INFO", f"{filename} has been archived")
+                # return dataclasses.asdict(ProductSummary(current_simulation_time.isoformat(), self.name, filename, True, quality, inputs_summary))
+                return dataclasses.asdict(metadata["summary"])
                 
     def __calculate_quality(self, inputs, metadata):
         total = 0
@@ -307,7 +309,7 @@ def start(args):
         
     historic_data = []
     
-    for time_tick in range(7 * 24 * 60):
+    for time_tick in range(30 * 24 * 60):
         # print(f"Simulation time : {global_simulation_time}")
         for satellite in satellites.values():
             satellite.propagate(global_simulation_time)
@@ -332,7 +334,9 @@ def start(args):
         
     injectHistoricData(historic_data)
     
-    for time_tick in range(60 * 24):
+    input("Press Enter to continue...")
+    
+    for time_tick in range(7 * 60 * 24):
         # print(f"Simulation time : {global_simulation_time}")
         for satellite in satellites.values():
             satellite.propagate(global_simulation_time)
@@ -354,7 +358,7 @@ def start(args):
         
         # print(archive)
         global_simulation_time = global_simulation_time + datetime.timedelta(minutes=1)
-        time.sleep(0.1)
+        time.sleep(0.01)
 
     
 def main(argv=None):  # IGNORE:C0111
@@ -407,5 +411,4 @@ USAGE
 
 if __name__ == "__main__":
     sys.exit(main())
-    
     
