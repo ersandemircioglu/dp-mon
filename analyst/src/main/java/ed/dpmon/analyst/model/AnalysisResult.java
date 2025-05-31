@@ -8,7 +8,7 @@ public class AnalysisResult {
     private final ProductSummary productSummary;
 
     /**
-     * Quality class between 0 (low or N/A) - AnalystService.NUM_OF_QUALITY_CLASS
+     * Quality class between 0 (N/A) 1 (low) - AnalystService.NUM_OF_QUALITY_CLASS
      * (high)
      */
     private int qualityClass;

@@ -12,16 +12,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
-import ed.dpmon.analyst.WebSocketConfig;
 import ed.dpmon.analyst.model.AnalysisResult;
 import ed.dpmon.analyst.model.ProductSummary;
 import ed.dpmon.analyst.model.Snapshot;
 import ed.dpmon.analyst.util.NeuralNetwork;
+import ed.dpmon.analyst.util.ProductStatistics;
 
 @Service
 public class AnalystService {
-
-    private final WebSocketConfig webSocketConfig;
 
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
@@ -35,10 +33,7 @@ public class AnalystService {
     private LinkedHashSet<String> productInsertionOrder = new LinkedHashSet<String>();
     private Map<String, List<Snapshot>> trainingData = new HashMap<String, List<Snapshot>>();
     private Map<String, NeuralNetwork> nnMap = new HashMap<String, NeuralNetwork>();
-
-    AnalystService(WebSocketConfig webSocketConfig) {
-        this.webSocketConfig = webSocketConfig;
-    }
+    private Map<String, ProductStatistics> productStatisticsMap = new HashMap<String, ProductStatistics>();
 
     public List<AnalysisResult> fetch() {
         return analysisResults;
@@ -59,11 +54,15 @@ public class AnalystService {
             }
         }
         generateNNs();
+        calculateProductStatistics();
         return productSummaries.size();
     }
 
     private Snapshot createSnapshot(AnalysisResult analysisResult) {
-        Snapshot snapshot = new Snapshot(analysisResult, NUM_OF_QUALITY_CLASS);
+        Snapshot snapshot = new Snapshot();
+        snapshot.setProductGenerationTime(analysisResult.getRelativeTime());
+        snapshot.setQualityClass(analysisResult.getQualityClass());
+
         for (AnalysisResult analysisResultFromCache : productCache.values()) {
             long diff = analysisResult.getRelativeTime() - analysisResultFromCache.getRelativeTime();
             if (diff > 0) { // the product from cache was generated before this product and may affect this
@@ -82,12 +81,25 @@ public class AnalystService {
         }
     }
 
+    private void calculateProductStatistics() {
+        for (String productName : trainingData.keySet()) {
+            ProductStatistics productStatistics = new ProductStatistics(productInsertionOrder,
+                    trainingData.get(productName));
+            productStatistics.estimateQuality(nnMap.get(productName));
+            productStatisticsMap.put(productName, productStatistics);
+        }
+    }
+
     public int append(ProductSummary productSummary) {
         AnalysisResult analysisResult = analyse(productSummary);
         analysisResults.add(analysisResult);
         if (analysisResult.getProductSummary().isProduct()) {
             Snapshot snapshot = createSnapshot(analysisResult);
-            nnMap.get(analysisResult.getProductSummary().getName()).test(snapshot);
+            int qClass = nnMap.get(analysisResult.getProductSummary().getName()).test(snapshot);
+            System.out.println(
+                    "Estimated Quality Class: " + qClass + " Actual Quality Class: " + analysisResult.getQualityClass()
+                            + " Actual Quality Value: " + productSummary.getQuality() + " Correctly estimated: "
+                            + (qClass == analysisResult.getQualityClass()));
         }
         messagingTemplate.convertAndSend("/topic/data", analysisResult);
         return 1;
@@ -114,24 +126,16 @@ public class AnalystService {
     }
 
     /**
-     * Adds the Analysis Result to the cache which stores latest AnalysisResult
-     * instance of each product type
-     * 
-     * @param analysisResult
-     * 
-     */
-    private void addToCache(AnalysisResult analysisResult) {
-
-    }
-
-    /**
      * Converts quality value to quality class
      * 
-     * @param Quality value between 0.0 (low or N/A) - 1.0 (high)
-     * @return Quality class between 0 (low or N/A) - NUM_OF_QUALITY_CLASS (high)
+     * @param Quality value between 0.0 (low and/or N/A) - 1.0 (high)
+     * @return Quality class between 0 (N/A) 1 (low) - NUM_OF_QUALITY_CLASS (high)
      */
     private int calculateQualityClass(float quality) {
         int qualityClass = (int) (quality * NUM_OF_QUALITY_CLASS);
+        if (qualityClass == 0 && quality > 0) {
+            qualityClass = 1;
+        }
         if (qualityClass > 10) {
             qualityClass = 10;
         }

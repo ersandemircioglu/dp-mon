@@ -7,11 +7,8 @@ import lombok.Data;
 
 @Data
 public class Snapshot {
-    private final AnalysisResult analysisResult;
-    private Map<String, Long> features = new HashMap<String, Long>();
+    private Long productGenerationTime;
+    private int qualityClass;
 
-    public Snapshot(AnalysisResult analysisResult, int numOfQualityClass) {
-        this.analysisResult = analysisResult;
-    }
-
+    private final Map<String, Long> features = new HashMap<String, Long>();
 }
