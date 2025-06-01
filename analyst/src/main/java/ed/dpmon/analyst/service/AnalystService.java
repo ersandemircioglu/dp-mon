@@ -55,6 +55,17 @@ public class AnalystService {
         }
         generateNNs();
         calculateProductStatistics();
+        StringBuilder sb = new StringBuilder()
+                .append("Product Name").append("\t");
+        for (String productName : productInsertionOrder) {
+            sb.append(productName).append("\t");
+        }
+        sb.append("Actual Quality").append("\t");
+        sb.append("Actual Quality Class").append("\t");
+        sb.append("Estimated Quality Class").append("\t");
+        sb.append("Result");
+        System.out.println(sb.toString());
+
         return productSummaries.size();
     }
 
@@ -96,10 +107,21 @@ public class AnalystService {
         if (analysisResult.getProductSummary().isProduct()) {
             Snapshot snapshot = createSnapshot(analysisResult);
             int qClass = nnMap.get(analysisResult.getProductSummary().getName()).test(snapshot);
-            System.out.println(
-                    "Estimated Quality Class: " + qClass + " Actual Quality Class: " + analysisResult.getQualityClass()
-                            + " Actual Quality Value: " + productSummary.getQuality() + " Correctly estimated: "
-                            + (qClass == analysisResult.getQualityClass()));
+            StringBuilder sb = new StringBuilder()
+                    .append(analysisResult.getProductSummary().getName()).append("\t");
+            for (String productName : productInsertionOrder) {
+                Long diff = snapshot.getFeatures().get(productName);
+                if (diff != null && diff > 0) {
+                    sb.append(diff).append("\t");
+                } else {
+                    sb.append("N/A").append("\t");
+                }
+            }
+            sb.append(productSummary.getQuality()).append("\t");
+            sb.append(analysisResult.getQualityClass()).append("\t");
+            sb.append(qClass).append("\t");
+            sb.append((qClass == analysisResult.getQualityClass()));
+            System.out.println(sb.toString());
         }
         messagingTemplate.convertAndSend("/topic/data", analysisResult);
         return 1;

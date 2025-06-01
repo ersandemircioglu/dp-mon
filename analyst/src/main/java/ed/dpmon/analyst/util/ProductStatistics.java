@@ -27,7 +27,6 @@ public class ProductStatistics {
     public void estimateQuality(NeuralNetwork nn) {
         for (String productName : productInsertionOrder) {
             estimateQualityForFeature(nn, productName);
-            System.out.println(featuresDataStats.get(productName));
         }
     }
 
