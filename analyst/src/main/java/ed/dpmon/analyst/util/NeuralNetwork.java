@@ -19,7 +19,7 @@ import org.nd4j.linalg.dataset.api.preprocessor.DataNormalization;
 import org.nd4j.linalg.dataset.api.preprocessor.NormalizerStandardize;
 import org.nd4j.linalg.learning.config.Sgd;
 
-import ed.dpmon.analyst.model.Snapshot;
+import ed.dpmon.analyst.model.AnalysisResult;
 
 public class NeuralNetwork {
 
@@ -55,27 +55,28 @@ public class NeuralNetwork {
         normalizer = new NormalizerStandardize();
     }
 
-    public void train(List<Snapshot> trainingData) {
+    public void train(List<AnalysisResult> trainingData) {
         DataSet dataSet = createDataSet(trainingData);
         train(dataSet);
     }
 
-    public int test(Snapshot testData) {
+    public AnalysisResult test(AnalysisResult testData) {
         DataSet dataSet = createDataSet(Arrays.asList(testData));
-        return test(dataSet);
+        testData.setEstimatedQualityClass(test(dataSet));
+        return testData;
     }
 
-    private DataSet createDataSet(List<Snapshot> trainingData) {
+    private DataSet createDataSet(List<AnalysisResult> trainingData) {
         int numOfSamples = trainingData.size();
         int numOfProductTypes = productInsertionOrder.size();
         double[][] featureArrays = new double[numOfSamples][numOfProductTypes];
         double[][] labelArrays = new double[numOfSamples][numOfOutputs];
 
         for (int sampleIndex = 0; sampleIndex < numOfSamples; sampleIndex++) {
-            Snapshot snapshot = trainingData.get(sampleIndex);
+            AnalysisResult analysisResult = trainingData.get(sampleIndex);
             int arrayIndex = 0;
             for (String productName : productInsertionOrder) {
-                Long diff = snapshot.getFeatures().get(productName);
+                Long diff = analysisResult.getSnapshot().get(productName);
                 if (diff != null && diff > 0) {
                     featureArrays[sampleIndex][arrayIndex] = diff.doubleValue();
                 } else {
@@ -83,7 +84,7 @@ public class NeuralNetwork {
                 }
                 arrayIndex++;
             }
-            labelArrays[sampleIndex][snapshot.getQualityClass()] = 1.0;
+            labelArrays[sampleIndex][analysisResult.getQualityClass()] = 1.0;
         }
         return new DataSet(new NDArray(featureArrays), new NDArray(labelArrays));
     }

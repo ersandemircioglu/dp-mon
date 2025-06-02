@@ -10,8 +10,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import ed.dpmon.analyst.AnalystApplication;
-import ed.dpmon.analyst.model.AnalysisResult;
-import ed.dpmon.analyst.model.ProductSummary;
+import ed.dpmon.analyst.model.AnnotatedFeature;
+import ed.dpmon.analyst.model.Feature;
 import ed.dpmon.analyst.service.AnalystService;
 
 @RestController
@@ -27,18 +27,18 @@ public class AnalystController {
     }
 
     @GetMapping("/fetch")
-    public List<AnalysisResult> fetch() {
+    public List<AnnotatedFeature> fetch() {
         return analystService.fetch();
     }
 
     @PostMapping("/inject")
-    public int inject(@RequestBody List<ProductSummary> productSummaries) {
-        return analystService.inject(productSummaries);
+    public int inject(@RequestBody List<Feature> features) {
+        return analystService.inject(features);
     }
 
     @PatchMapping("/append")
-    public int append(@RequestBody ProductSummary productSummary) {
-        return analystService.append(productSummary);
+    public int append(@RequestBody Feature feature) {
+        return analystService.append(feature);
     }
 
 }
