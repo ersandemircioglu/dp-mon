@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>DP-Mon Analyst Home Page</title>
+</head>
+
+<body>
+    <h1>DP-Mon Analyst Home</h1>
+    
+    <table>
+            <tr>
+<!--               <th>Product Name</th> -->
+              <th>Dashboard URL</th>
+            </tr>
+            <tr th:each="productName : ${productNames}">
+<!--               <td th:text="${productName}"></td> -->
+              <td><a th:href="@{/dashboard/{name}(name=${productName})}" th:text="${productName}">${productName}</a></td>
+            </tr>
+          <table>
+</body>
+
+</html>

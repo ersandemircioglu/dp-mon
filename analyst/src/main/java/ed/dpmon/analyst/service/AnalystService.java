@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -30,11 +31,20 @@ public class AnalystService {
     private Map<String, AnnotatedFeature> productCache = new HashMap<String, AnnotatedFeature>();
 
     private LinkedHashSet<String> productInsertionOrder = new LinkedHashSet<String>();
-    private Map<String, List<AnalysisResult>> trainingData = new HashMap<String, List<AnalysisResult>>();
+    private Map<String, List<AnalysisResult>> historicalData = new HashMap<String, List<AnalysisResult>>();
+    private Map<String, List<AnalysisResult>> liveData = new HashMap<String, List<AnalysisResult>>();
     private Map<String, NeuralNetwork> nnMap = new HashMap<String, NeuralNetwork>();
 
-    public List<AnnotatedFeature> fetch() {
-        return annotatedFeatures;
+    public Set<String> getProductNames() {
+        return historicalData.keySet();
+    }
+
+    public List<AnalysisResult> getHistoricalData(String productName) {
+        return historicalData.get(productName);
+    }
+
+    public List<AnalysisResult> getLiveData(String productName) {
+        return liveData.get(productName);
     }
 
     public int inject(List<Feature> features) {
@@ -43,10 +53,11 @@ public class AnalystService {
             productInsertionOrder.add(annotatedFeature.getFeature().getName());
             if (feature.isProduct()) {
                 AnalysisResult analysisResult = createAnalysisResult(annotatedFeature);
-                if (!trainingData.containsKey(feature.getName())) {
-                    trainingData.put(feature.getName(), new ArrayList<AnalysisResult>());
+                if (!historicalData.containsKey(feature.getName())) {
+                    historicalData.put(feature.getName(), new ArrayList<AnalysisResult>());
+                    liveData.put(feature.getName(), new ArrayList<AnalysisResult>());
                 }
-                trainingData.get(feature.getName()).add(analysisResult);
+                historicalData.get(feature.getName()).add(analysisResult);
             }
         }
         generateNNs();
@@ -56,9 +67,9 @@ public class AnalystService {
     }
 
     private void generateNNs() {
-        for (String productName : trainingData.keySet()) {
+        for (String productName : historicalData.keySet()) {
             NeuralNetwork nn = new NeuralNetwork(productInsertionOrder, NUM_OF_QUALITY_CLASS + 1);
-            nn.train(trainingData.get(productName));
+            nn.train(historicalData.get(productName));
             nnMap.put(productName, nn);
         }
     }
@@ -69,6 +80,8 @@ public class AnalystService {
         if (feature.isProduct()) {
             AnalysisResult analysisResult = createAnalysisResult(annotatedFeature);
             nnMap.get(feature.getName()).test(analysisResult);
+            liveData.get(feature.getName()).add(analysisResult);
+
             System.out.println(analysisResult.getPrintStr(productInsertionOrder));
         }
         messagingTemplate.convertAndSend("/topic/data", annotatedFeature);

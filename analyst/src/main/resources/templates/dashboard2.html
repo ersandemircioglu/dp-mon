@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Real-Time Dashboard</title>
+</head>
+
+<body>
+    <h1>Real-Time Data Dashboard</h1>
+    <div th:fragment="chartFragment" style="width: 100%;">
+        <canvas id="chartCanvas"></canvas>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs/lib/stomp.min.js"></script>
+    <script th:inline="javascript">
+        const CHART_COLORS = {
+            red: 'rgb(255, 99, 132)',
+            orange: 'rgb(255, 159, 64)',
+            yellow: 'rgb(255, 205, 86)',
+            green: 'rgb(75, 192, 192)',
+            blue: 'rgb(54, 162, 235)',
+            purple: 'rgb(153, 102, 255)',
+            grey: 'rgb(201, 203, 207)'
+        };
+
+        const NAMED_COLORS = [
+            CHART_COLORS.red,
+            CHART_COLORS.orange,
+            CHART_COLORS.yellow,
+            CHART_COLORS.green,
+            CHART_COLORS.blue,
+            CHART_COLORS.purple,
+            CHART_COLORS.grey,
+        ];
+
+        function namedColor(index) {
+            return NAMED_COLORS[index % NAMED_COLORS.length];
+        }
+               
+        var chart = new Chart(document.getElementById("chartCanvas"),
+            {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: []
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Dashboard'
+                        }
+                    }
+                }
+            }
+        );
+
+        function initChart(historicData) {
+            historicData.forEach(dataItem => addData(dataItem));
+            chart.update("none");
+        }
+
+        function isAuxProduct(dataItem) {
+            return !(dataItem.quality);
+        }
+
+        function addData(dataItem) {
+            if (chart.data.labels.indexOf(dataItem.processing_time) < 0)
+                chart.data.labels.push(dataItem.processing_time);
+            if (isAuxProduct(dataItem)) {
+                dsIndex = chart.data.datasets.map(ds => ds.label).indexOf(dataItem.name);
+                if(dsIndex < 0){
+                    dsIndex = chart.data.datasets.length;
+                }
+                addDataToDataset(dataItem.name, dataItem.processing_time, dsIndex * 5, 'bar');
+            } else {
+                addDataToDataset(dataItem.name.concat("-Timeliness"), dataItem.processing_time, dataItem.timeliness, 'line');
+                addDataToDataset(dataItem.name.concat("-Quality"), dataItem.processing_time, dataItem.quality, 'line');
+            }
+        }
+
+        function addDataToDataset(dsName, dataX, dataValue, dsType) {
+            dsIndex = chart.data.datasets.map(ds => ds.label).indexOf(dsName);
+            dataset = [];
+            if (dsIndex < 0) {
+                dataset = addDataset(dsName, dsType);
+            } else {
+                dataset = chart.data.datasets[dsIndex];
+            }
+            dataset.data.push({x: dataX, y:dataValue});
+        }
+
+        function addDataset(dsName, dsType) {
+            color = namedColor(chart.data.datasets.length);
+            const newDataset = {
+                label: dsName,
+                data: [],
+                borderColor: color,
+                backgroundColor: color,
+                type: dsType
+            };
+            chart.data.datasets.push(newDataset);
+            return newDataset;
+        }
+
+        var historicData = /*[[${historicData}]]*/[];
+        initChart(historicData);
+
+        // Connect to the WebSocket
+        const socket = new SockJS('/ws');
+        const stompClient = Stomp.over(socket);
+
+        stompClient.connect({}, () => {
+            stompClient.subscribe('/topic/data', (message) => {
+                const payload = JSON.parse(message.body);
+                addData(payload);
+                chart.update("none");
+            });
+        });
+                
+    </script>
+</body>
+
+</html>
