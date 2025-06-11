@@ -13,27 +13,37 @@ table, th, td {
 <body>
     <h1 th:text="${productName}"></h1>
       
-    <h2>Live Data</h2>     
+    <h2>Live Data</h2>  
+        <div th:fragment="chartFragmentLive" style="width: 100%;">
+            <canvas id="chartCanvasLive"></canvas>
+        </div>   
         <div>
           <table>
-            <tr>
-              <th>Processing Time</th>
-              <th>File Name</th>
-              <th>Actual Quality</th>
-              <th>Actual Quality Class</th>
-              <th>Estimated Quality Class</th>
-            </tr>
-            <tr th:each="data : ${liveData}">
-              <td th:text="${data.annotatedFeature.feature.processing_time}"></td>
-              <td th:text="${data.annotatedFeature.feature.filename}"></td>
-              <td th:text="${data.annotatedFeature.feature.quality}"></td>
-              <td th:text="${data.qualityClass}"></td>
-              <td th:text="${data.estimatedQualityClass}"></td>
-            </tr>
+            <thead>
+                <tr>
+                  <th>Processing Time</th>
+                  <th>File Name</th>
+                  <th>Actual Quality</th>
+                  <th>Actual Quality Class</th>
+                  <th>Estimated Quality Class</th>
+                </tr>
+            </thead>
+            <tbody id="tableContentLive">
+                <tr th:each="data : ${liveData}">
+                  <td th:text="${data.annotatedFeature.feature.processing_time}"></td>
+                  <td th:text="${data.annotatedFeature.feature.filename}"></td>
+                  <td th:text="${data.annotatedFeature.feature.quality}"></td>
+                  <td th:text="${data.qualityClass}"></td>
+                  <td th:text="${data.estimatedQualityClass}"></td>
+                </tr>
+            </tbody>
           <table>
         </div>
         
-    <h2>Historical Data</h2>     
+    <h2>Historical Data</h2>
+        <div th:fragment="chartFragmentHistoric" style="width: 100%;">
+            <canvas id="chartCanvasHistoric"></canvas>
+        </div>     
         <div>
           <table>
             <tr>
@@ -50,6 +60,155 @@ table, th, td {
             </tr>
           <table>
         </div>
+        
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs/lib/stomp.min.js"></script>
+    <script th:inline="javascript">
+        const CHART_COLORS = {
+            red: 'rgb(255, 99, 132)',
+            orange: 'rgb(255, 159, 64)',
+            yellow: 'rgb(255, 205, 86)',
+            green: 'rgb(75, 192, 192)',
+            blue: 'rgb(54, 162, 235)',
+            purple: 'rgb(153, 102, 255)',
+            grey: 'rgb(201, 203, 207)'
+        };
+
+        const NAMED_COLORS = [
+            CHART_COLORS.red,
+            CHART_COLORS.orange,
+            CHART_COLORS.yellow,
+            CHART_COLORS.green,
+            CHART_COLORS.blue,
+            CHART_COLORS.purple,
+            CHART_COLORS.grey,
+        ];
+
+        function namedColor(index) {
+            return NAMED_COLORS[index % NAMED_COLORS.length];
+        }
+               
+        var chartHistoric = new Chart(document.getElementById("chartCanvasHistoric"),
+            {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: []
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Dashboard - Historical Data'
+                        }
+                    }
+                }
+            }
+        );
+        
+        var chartLive = new Chart(document.getElementById("chartCanvasLive"),
+                {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: []
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                            },
+                            title: {
+                                display: true,
+                                text: 'Dashboard - Live Data'
+                            }
+                        }
+                    }
+                }
+            );
+
+        function initChart(chart, data) {
+            data.forEach(dataItem => addData(chart, dataItem));
+            chart.update("none");
+        }
+
+        function addData(chart, dataItem) {
+            if (chart.data.labels.indexOf(dataItem.annotatedFeature.feature.processing_time) < 0)
+                chart.data.labels.push(dataItem.annotatedFeature.feature.processing_time);
+            
+            Object.entries(dataItem.snapshot).forEach(([key,value]) => {
+                dsIndex = chart.data.datasets.map(ds => ds.label).indexOf(key);
+                if(dsIndex < 0){
+                    dsIndex = chart.data.datasets.length;
+                }
+                addDataToDataset(chart, key, dataItem.annotatedFeature.feature.processing_time, value, 'line');
+            })
+                        
+                //addDataToDataset(dataItem.name.concat("-Timeliness"), dataItem.processing_time, dataItem.timeliness, 'line');
+            addDataToDataset(chart, "Quality", dataItem.annotatedFeature.feature.processing_time, dataItem.qualityClass, 'line');
+        }
+
+        function addDataToDataset(chart, dsName, dataX, dataValue, dsType) {
+            dsIndex = chart.data.datasets.map(ds => ds.label).indexOf(dsName);
+            dataset = [];
+            if (dsIndex < 0) {
+                dataset = addDataset(chart, dsName, dsType);
+            } else {
+                dataset = chart.data.datasets[dsIndex];
+            }
+            dataset.data.push({x: dataX, y:dataValue});
+        }
+
+        function addDataset(chart, dsName, dsType) {
+            color = namedColor(chart.data.datasets.length);
+            const newDataset = {
+                label: dsName,
+                data: [],
+                borderColor: color,
+                backgroundColor: color,
+                type: dsType
+            };
+            chart.data.datasets.push(newDataset);
+            return newDataset;
+        }
+
+        var historicData = /*[[${historicData}]]*/[];
+        initChart(chartHistoric, historicData);
+        
+        var liveData = /*[[${liveData}]]*/[];
+        initChart(chartLive, liveData);
+
+        // Connect to the WebSocket
+        const socket = new SockJS('/ws');
+        const stompClient = Stomp.over(socket);
+
+        stompClient.connect({}, () => {
+            stompClient.subscribe('/topic/data', (message) => {
+                const payload = JSON.parse(message.body);
+                appendToTable(payload);
+                addData(chartLive, payload);
+                chartLive.update("none");
+            });
+        });
+        
+        function appendToTable(message) {
+            $("#tableContentLive").append("<tr>"+
+                    "<td>"+message.annotatedFeature.feature.processing_time+"</td>"+
+                    "<td>"+message.annotatedFeature.feature.filename+"</td>"+
+                    "<td>"+message.annotatedFeature.feature.quality+"</td>"+
+                    "<td>"+message.qualityClass+"</td>"+
+                    "<td>"+message.estimatedQualityClass+"</td>"+
+                  "</tr>");
+        }
+                
+    </script>
 </body>
 
 </html>

@@ -139,7 +139,7 @@ This command compiles the application and open localhost:8080 for Rest calls. Af
 #LOCAL_GIT_FOLDER#/dp-mon/test-tools$ python generate_inputs.py -c generate_inputs.json 
 
 ```
-When the historical data generation is done and processed by the Analyst application, the test tool waits for confirmation. After the confirmation it generates records for next 7 days. Each record are processed by the application and results are printed to the console tab separated. The application can be terminated with "CTRL+C". 
+When the historical data generation is done and processed by the Analyst application, the test tool waits for a confirmation to continue. After the confirmation, it generates records for next 7 days. Each record are processed by the application and results are printed to the console tab separated. Historical and live data can also be displayed over "http://localhost:8080/home". The application can be terminated with "CTRL+C". 
 
 **Note**: if the generate_inputs returns "generate_inputs.py: KeyError('TLE')" error, please re-trigger the command again. Due to the script generates products randomly, sometimes it fails to generated first products.  
 

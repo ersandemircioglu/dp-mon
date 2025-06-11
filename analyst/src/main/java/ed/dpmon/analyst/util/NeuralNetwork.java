@@ -92,7 +92,7 @@ public class NeuralNetwork {
     private void train(DataSet trainingDataSet) {
         normalizer.fit(trainingDataSet);
         normalizer.transform(trainingDataSet);
-        for (int i = 0; i < 10000; i++) {
+        for (int i = 0; i < 1000; i++) {
             model.fit(trainingDataSet);
         }
     }

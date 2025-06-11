@@ -83,8 +83,9 @@ public class AnalystService {
             liveData.get(feature.getName()).add(analysisResult);
 
             System.out.println(analysisResult.getPrintStr(productInsertionOrder));
+
+            messagingTemplate.convertAndSend("/topic/data", analysisResult);
         }
-        messagingTemplate.convertAndSend("/topic/data", annotatedFeature);
         return 1;
     }
 
